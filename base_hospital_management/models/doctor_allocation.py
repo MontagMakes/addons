@@ -31,7 +31,7 @@ class DoctorAllocation(models.Model):
     doctor_id = fields.Many2one('hr.employee', string="Doctor",
                                 help='Name of the doctor',
                                 domain=[('job_id.name', '=', 'Doctor')])
-    name = fields.Char(string="Name", readonly=True, default='New',
+    name = fields.Char(string="Name", default='New',
                        help='Name of the allocation')
     department_id = fields.Many2one(string='Department',
                                     help='Department of the doctor',
