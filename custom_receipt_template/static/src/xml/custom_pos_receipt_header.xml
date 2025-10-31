@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+   <t t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension">
+        <xpath expr="//div[@class='pos-receipt-contact']/t[@t-if='props.data.company.phone']" position="replace">
+           <t t-if="props.data.company.phone">
+               <h3 style="font-weight: bold;">Contact # : <t t-esc='props.data.company.phone'/></h3>
+           </t>
+       </xpath>
+       <xpath expr="//div[@class='pos-receipt-contact']/div[@t-if='props.data.company.name']" position="replace">
+           <h3 style="text-align: center; font-weight: bold;"><t t-esc='props.data.company.name'/></h3>
+       </xpath>
+       <xpath expr="//div[@class='pos-receipt-contact']/div[@class='cashier']" position="replace">
+       </xpath>
+       <xpath expr="//div[@class='pos-receipt-contact']/div[@t-if='props.data.trackingNumber and !props.data.bigTrackingNumber']" position="replace">
+       </xpath>
+   </t>
+</templates>

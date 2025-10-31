@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="point_of_sale.Orderline" t-inherit="point_of_sale.Orderline" t-inherit-mode="extension">
+        <!-- Add barcode display after product name -->
+        <xpath expr="//div[@class='product-name']" position="inside">
+            <t t-if="line.productBarcode" class="ms-2 text-muted small">
+                (<t t-esc="line.productBarcode"/>)
+            </t>
+        </xpath>
+    </t>
+</templates>

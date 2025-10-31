@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <!-- Replace the whole receipt body with a table layout while preserving content -->
+        <xpath expr="//div[hasclass('pos-receipt')]" position="replace">
+            <div class="pos-receipt p-2">
+                <table class="w-100" style="border-collapse: collapse;">
+                    <tbody>
+                        <!-- Header Row -->
+                        <t t-set="showTaxGroupLabels" t-value="doesAnyOrderlineHaveTaxLabel()"/>
+                        <tr>
+                            <td style=" border:1px solid #000;">
+                                <ReceiptHeader data="props.data.headerData" />
+                            </td>
+                        </tr>
+
+                        <!-- Heading Row -->
+                        <tr>
+                            <td style=" text-align: center; border:1px solid #000;">
+                                <h3 style="font-weight: bold; font-size: 14px;">Sale Receipt</h3>
+                            </td>
+                        </tr>
+
+                        <!-- Invoice number -->
+                        <t t-if="props.data.name">
+                            <tr>
+                                <!-- border left and right only -->
+                                <td style="border-left:1px solid #000; border-right:1px solid #000;">
+                                    <div style="font-size: 10px;">
+                                        <span style="font-weight: bold;">Invoice # </span>
+                                        <t style="font-weight: bold; text-align: center;" t-esc="props.data.invoice_number"/>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border-left:1px solid #000; border-right:1px solid #000;">
+                                    <div style="font-size: 10px;"><span style="font-weight: bold;">Invoice Date: </span><t t-esc="props.data.date"/></div>
+                                </td>
+                            </tr>
+                        </t>
+
+
+                        <!-- Order Lines Row -->
+                        <t t-if="props.data.orderlines?.length">
+                            <tr>
+                                <td style="border:1px solid #000;">
+                                    <table class="w-100" style="border-collapse: collapse; font-size: 10px;">
+                                        <thead>
+                                            <tr>
+                                                <th style="text-align:left; border-bottom:1px solid #000;">Item Name</th>
+                                                <th style="text-align:right; border-bottom:1px solid #000;">Price</th>
+                                                <th style="text-align:center; border-bottom:1px solid #000;">Qty/Wt</th>
+                                                <th style="text-align:center; border-bottom:1px solid #000;">Tax%</th>
+                                                <th style="text-align:right; border-bottom:1px solid #000;">Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-set="totalQty" t-value="0"/>
+                                            <t t-set="totalItems" t-value="0"/>
+                                            <t t-foreach="props.data.orderlines" t-as="line" t-key="line_index">
+                                                <!-- First row: full item name spanning all 5
+                                                columns -->
+                                                <tr>
+                                                    <td colspan="5" style="padding: 2px 0;">
+                                                        <span class="fw-bolder" t-esc="line.productName"/>
+                                                    </td>
+                                                </tr>
+                                                <!-- Second row: aligned values under columns (Name
+                                                column intentionally left blank) -->
+                                                <tr>
+                                                    <td></td>
+                                                    <td style="text-align:right;">
+                                                        <t t-esc="line.unitPrice"/>
+                                                    </td>
+                                                    <td style="text-align:center;">
+                                                        <t t-set="qty3" t-value="(line.qty ? (+line.qty).toFixed(3) : '0.000')"/>
+                                                        <t t-set="unitLower" t-value="(line.unit or '').toLowerCase()"/>
+                                                        <t t-if="unitLower and unitLower !== 'units'">
+                                                            <t t-esc="qty3"/> Kg
+                                                        </t>
+                                                        <t t-else="">
+                                                            <t t-esc="qty3"/> P
+                                                        </t>
+                                                    </td>
+                                                    <td style="text-align:center;">
+                                                        <t t-if="line.taxGroupLabels">
+                                                            <t t-esc="line.taxGroupLabels"/>
+                                                        </t>
+                                                        <t t-else="">-</t>
+                                                    </td>
+                                                    <td style="text-align:right;">
+                                                        <t t-esc="line.price"/>
+                                                    </td>
+                                                </tr>
+                                                <!-- Divider under each item -->
+                                                <tr>
+                                                    <td colspan="5" style="border-top:1px solid #000;"/>
+                                                </tr>
+                                                <!-- Accumulate totals -->
+                                                <t t-set="totalItems" t-value="totalItems + 1"/>
+                                                <t t-set="totalQty" t-value="totalQty + (line.qty ? +line.qty : 0)"/>
+                                            </t>
+                                            <!-- Summary row after all lines -->
+                                            <tr>
+                                                <td colspan="5" style="padding-top: 4px;">
+                                                    <div class="d-flex justify-content-around" style="font-size: 10px;">
+                                                        <div>
+                                                            <span class="fw-bolder">Total Item</span>
+                                                            <span class="ms-1" t-esc="totalItems"/>
+                                                        </div>
+                                                        <div>
+                                                            <span class="fw-bolder">Total Qty</span>
+                                                            <span class="ms-1" t-esc="totalQty"/>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        </t>
+
+                        <!-- Totals Row (shown only on full receipt) -->
+                        <t t-if="!props.basic_receipt">
+                            <tr>
+                                <td style="border:1px solid #000;">
+                                    <t t-set="taxTotals" t-value="props.data.taxTotals"/>
+                                    
+                                    <div class="pos-receipt-amount receipt-total" style="font-weight: bold; font-size: 10px;">
+                                        Bill Total
+                                        <span t-esc="props.formatCurrency(taxTotals.order_sign * taxTotals.order_total)" class="pos-receipt-right-align"/>
+                                        <!-- two lines under the value, half-width aligned to the right -->
+                                        <div style="width:50%;margin-left:auto;border-top:1px solid #000;line-height:0; padding-bottom: 1px"/>
+                                        <div style="width:50%;margin-left:auto;border-top:1px solid #000;line-height:0;"/>
+                                    </div>
+                                    <div class="pos-receipt-amount" style="font-size: 10px;">
+                                        G.S.T
+                                        <span t-esc="props.formatCurrency(props.data.amount_tax)" class="pos-receipt-right-align"  style="font-weight: bold;"/>
+                                        <!-- one line under the value, half-width aligned to the right -->
+                                        <!-- <div style="width:50%;margin-left:auto;border-top:1px solid #000;line-height:0;"/> -->
+                                    </div>
+                                    <t t-if="props.data.show_rounding">
+                                        <div class="pos-receipt-amount receipt-rounding">
+                                            <t t-out="props.data.label_rounding"/>
+                                            <span t-esc="props.formatCurrency(taxTotals.order_sign * taxTotals.order_rounding)" class="pos-receipt-right-align"/>
+                                        </div>
+                                        <div class="pos-receipt-amount receipt-to-pay">
+                                            To Pay
+                                            <span t-esc="props.formatCurrency(taxTotals.order_sign * (taxTotals.order_total + taxTotals.order_rounding))" class="pos-receipt-right-align"/>
+                                        </div>
+                                    </t>
+                                </td>
+                            </tr>
+
+                            <!-- Payments Row(s) -->
+                            <!-- <t t-foreach="props.data.paymentlines" t-as="payment" t-key="payment_index">
+                                <tr>
+                                    <td style="border:1px solid #000;">
+                                        <div class="d-flex justify-content-between">
+                                            <div t-esc="payment.name"/>
+                                            <div t-esc="props.formatCurrency(payment.amount)"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </t> -->
+
+                            <!-- Change Row -->
+                            <t t-if="props.data.show_change">
+                                <tr>
+                                    <td style="border:1px solid #000;">
+                                        <div class="d-flex justify-content-between">
+                                            <div t-esc="props.data.label_change" class="fw-bold"/>
+                                            <div class="fw-bold" t-esc="props.formatCurrency(props.data.change)"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <!-- Extra Payment Info Row -->
+                            <tr>
+                                <td style="border:1px solid #000;">
+                                    <!-- Extra Payment Info -->
+                                    <t t-if="props.data.total_discount">
+                                        <div class="text-center">
+                                            <t t-out="props.data.label_discounts"/>
+                                            <span t-esc="props.formatCurrency(props.data.total_discount)" class="pos-receipt-right-align"/>
+                                        </div>
+                                    </t>
+
+                                    <div class="before-footer" />
+
+                                    <!-- This prevents missing receipt elements in modules like
+                                    `l10n_fr_pos_cert`, `l10n_co_pos`, etc. -->
+                                    <div class="pos-receipt-order-data" />
+
+                                    <div t-if="props.data.pos_qr_code">
+                                        <br/>
+                                        <div class="pos-receipt-order-data mb-2">
+                                            Need an invoice for your purchase ?
+                                        </div>
+                                    </div>
+
+                                    <div t-if="['qr_code', 'qr_code_and_url'].includes(props.data.headerData.company.point_of_sale_ticket_portal_url_display_mode) and props.data.pos_qr_code" class="mb-2">
+                                        <img id="posqrcode" t-att-src="props.data.pos_qr_code" class="pos-receipt-logo"/>
+                                    </div>
+
+                                    <div t-if="props.data.pos_qr_code">
+                                        <div class="unique-code pos-receipt-order-data">
+                                            Unique Code: <t t-esc="props.data.ticket_code"/>
+                                        </div>
+                                    </div>
+
+                                    <div t-if="['url', 'qr_code_and_url'].includes(props.data.headerData.company.point_of_sale_ticket_portal_url_display_mode) and props.data.pos_qr_code">
+                                        <div class="portal-url pos-receipt-order-data" t-attf-class="{{ props.data.ticket_portal_url_display_mode === 'qr_code_and_url' ? 'mt-3' : '' }}">
+                                            Portal URL: <t t-esc="getPortalURL()"/>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Footer Row (optional footer text) -->
+                            <t t-if="props.data.footer">
+                                <tr>
+                                    <td style="border:1px solid #000;">
+                                        <div class="mt-2" style="white-space: pre-line;" t-esc="props.data.footer"/>
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <!-- After Footer + Shipping + Powered By + Order Info Row -->
+                            <tr>
+                                <td style="border:1px solid #000;">
+                                    <div class="after-footer">
+                                        <t t-foreach="props.data.paymentlines" t-as="line" t-key="line_index">
+                                            <t t-if="line.ticket">
+                                                <br />
+                                                <div class="pos-payment-terminal-receipt">
+                                                    <pre t-esc="line.ticket" />
+                                                </div>
+                                            </t>
+                                        </t>
+                                    </div>
+
+                                    <br/>
+                                    <t t-if="props.data.shippingDate">
+                                        <div class="pos-receipt-order-data">
+                                            Expected delivery:
+                                            <div><t t-esc="props.data.shippingDate" /></div>
+                                        </div>
+                                    </t>
+
+                                    <br/>
+                                    <div class="pos-receipt-order-data">
+                                        <p>Powered by Odoo</p>
+                                        <div t-esc="props.data.name" />
+                                        <div id="order-date" t-esc="props.data.date" />
+                                    </div>
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+            </div>
+        </xpath>
+    </t>
+</templates>
